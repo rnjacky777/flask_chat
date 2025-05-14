@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chat Room</title>
+    <style>
+        html,
+        body {
+            margin: 0;
+            padding: 0;
+            width: 100%;
+            height: 100%;
+            font-family: sans-serif;
+            background-color: #f5f5f5;
+            box-sizing: border-box;
+            overflow: hidden;
+            /* 避免整頁出現滾動條 */
+        }
+
+        /* 更現代的容器設計：撐滿畫面 + 居中 + 自適應 */
+        .container {
+            max-width: 800px;
+            height: 100vh;
+            margin: 0 auto;
+            display: flex;
+            flex-direction: column;
+            padding: 20px;
+            border-radius: 16px;
+            background: #fff;
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
+            overflow: hidden;
+            /* 限制內部溢出 */
+        }
+
+        h1 {
+            text-align: center;
+        }
+
+        input,
+        label {
+            font-size: 16px;
+            display: block;
+            margin-top: 10px;
+            width: 100%;
+        }
+
+        #chatMessages {
+            background: #e6ecf0;
+            /* padding: 5px; */
+            height: 300px;
+            overflow-y: scroll;
+            border-radius: 12px;
+        }
+
+        .message-wrapper {
+            max-width: 70%;
+            margin: 10px;
+            padding: 12px 16px;
+            border-radius: 16px;
+            word-break: break-word;
+            clear: both;
+            position: relative;
+        }
+
+        .message-left {
+            background: #fff;
+            float: left;
+        }
+
+        .message-right {
+            background: #dcf8c6;
+            float: right;
+        }
+
+        .message-time {
+            font-size: 12px;
+            color: #555;
+            text-align: right;
+            margin-top: 5px;
+        }
+
+        .qr {
+            text-align: center;
+            margin-top: 20px;
+        }
+
+        .qr img {
+            max-width: 200px;
+        }
+
+        .logout-btn {
+            position: absolute;
+            top: 16px;
+            right: 16px;
+
+            background: #fbe0e0;
+            color: #cc2222;
+            padding: 8px 15px;
+            border-radius: 8px;
+            text-decoration: none;
+            font-size: 15px;
+            transition: background 0.19s;
+            z-index: 1000;
+
+        }
+
+        .logout-btn:hover {
+            background: #ffc0c0;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <a href="/logout" class="logout-btn">登出</a>
+        <h1>Chat Room</h1>
+        <div class="qr">
+            <p>🌐 本機網址：<a href={{local_url}} target="_blank">{{local_url}}</a></p>
+            <img src="{{ qr_img_url }}" alt="QR Code">
+        </div>
+
+        <div id="chatMessages"></div>
+        <form id="chatForm">
+            <label>Message:</label>
+            <input type="text" id="message" required>
+            <input type="submit" value="Send">
+        </form>
+    </div>
+
+    <script>
+
+
+        document.getElementById("chatForm").addEventListener("submit", e => {
+            e.preventDefault();
+            const message = document.getElementById("message").value;
+
+            const formData = new FormData();
+            formData.append("message", message);
+
+            fetch("/send_msg", { method: "POST", body: formData })
+                .then(res => res.text())
+                .then(txt => {
+                    document.getElementById("message").value = "";
+                    loadMessages();
+                });
+        });
+
+        function loadMessages() {
+            fetch("/get_recent_msg")
+                .then(res => res.json())
+                .then(data => {
+                    const { current_user_id, messages } = data;
+                    const box = document.getElementById("chatMessages");
+                    box.innerHTML = "";
+
+                    messages.forEach(msg => {
+                        const { timestamp, user_id, name, message } = msg;
+                        const isMe = user_id === current_user_id;
+
+                        const wrap = document.createElement("div");
+                        wrap.className = "message-wrapper " + (isMe ? "message-right" : "message-left");
+                        wrap.innerHTML = `
+                    <strong>${name}:</strong> ${message}
+                    <div class='message-time'>${timestamp.split(" ")[1]}</div>`;
+                        box.appendChild(wrap);
+                    });
+
+                    box.scrollTop = box.scrollHeight;
+                });
+        }
+
+        loadMessages();
+        setInterval(loadMessages, 5000);
+    </script>
+</body>
+
+</html>

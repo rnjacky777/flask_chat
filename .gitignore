@@ -1,0 +1,6 @@
+/.venv
+/chat.db
+/example.db
+/qr_codes
+/trashcan
+/__pycache__

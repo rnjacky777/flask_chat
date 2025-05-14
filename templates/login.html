@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="UTF-8">
+    <title>登入 | 聊天室</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <style>
+        body {
+            background: linear-gradient(135deg, #e0eafc, #cfdef3 80%);
+            height: 100vh;
+            margin: 0;
+            font-family: 'Segoe UI', '微軟正黑體', Arial, sans-serif;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .login-box {
+            background: #fff;
+            border-radius: 18px;
+            box-shadow: 0 6px 30px rgba(0, 0, 0, 0.12);
+            padding: 42px 38px 32px 38px;
+            width: 350px;
+            max-width: 95vw;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        h2 {
+            margin-bottom: 28px;
+            font-size: 2rem;
+            color: #253858;
+            font-weight: 700;
+        }
+
+        label {
+            font-size: 1rem;
+            color: #3a3d42;
+            margin-bottom: 4px;
+            margin-left: 4px;
+            text-align: left;
+            width: 100%;
+        }
+
+        input[type=text],
+        input[type=password] {
+            width: 100%;
+            padding: 12px 10px;
+            margin-bottom: 18px;
+            border: 1.3px solid #b3bdc6;
+            border-radius: 8px;
+            background: #f7f9fa;
+            font-size: 1.06rem;
+            transition: border 0.2s;
+        }
+
+        input[type=text]:focus,
+        input[type=password]:focus {
+            border-color: #006dff;
+            outline: none;
+            background: #fff;
+        }
+
+        input[type=submit] {
+            width: 100%;
+            padding: 13px 0;
+            background: linear-gradient(90deg, #35c6e9, #6499e8 90%);
+            color: #fff;
+            border: none;
+            border-radius: 8px;
+            font-size: 1.15rem;
+            font-weight: 700;
+            cursor: pointer;
+            letter-spacing: 2px;
+            box-shadow: 0 3px 9px rgba(52, 130, 219, 0.12);
+            margin-top: 6px;
+            transition: background 0.22s;
+        }
+
+        input[type=submit]:hover {
+            background: linear-gradient(90deg, #23a6d5, #4364f7 85%);
+        }
+
+        .tips {
+            margin-top: 18px;
+            font-size: 0.97rem;
+            color: #58607c;
+            text-align: center;
+        }
+
+        .error {
+            color: #f23434;
+            margin-bottom: 10px;
+            font-size: 1rem;
+            text-align: center;
+        }
+    </style>
+</head>
+
+<body>
+    <form class="login-box" method="post" autocomplete="off">
+        <h2>聊天室登入</h2>
+        {% if error %}<div class="error">{{ error }}</div>{% endif %}
+        <label for="username">使用者名稱</label>
+        <input name="username" id="username" type="text" required autofocus autocomplete="username">
+        <label for="password">密碼</label>
+        <input name="password" id="password" type="password" required autocomplete="current-password">
+        <input type="submit" value="登入">
+        <div class="tips">
+            還沒有帳號？<a href="/register" style="color:#298eea;text-decoration:none;">註冊</a>
+        </div>
+    </form>
+    <script>document.getElementById("username").focus();</script>
+</body>
+
+</html>

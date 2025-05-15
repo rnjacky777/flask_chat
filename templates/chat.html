@@ -2,176 +2,155 @@
 <html lang="zh-Hant">
 
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Chat Room</title>
-    <style>
-        html,
-        body {
-            margin: 0;
-            padding: 0;
-            width: 100%;
-            height: 100%;
-            font-family: sans-serif;
-            background-color: #f5f5f5;
-            box-sizing: border-box;
-            overflow: hidden;
-            /* 避免整頁出現滾動條 */
-        }
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Chat Room</title>
+  <style>
+    html,
+    body {
+      margin: 0;
+      padding: 0;
+      width: 100%;
+      height: 100%;
+      font-family: sans-serif;
+      background-color: #f5f5f5;
+      overflow: hidden;
+    }
 
-        /* 更現代的容器設計：撐滿畫面 + 居中 + 自適應 */
-        .container {
-            max-width: 800px;
-            height: 100vh;
-            margin: 0 auto;
-            display: flex;
-            flex-direction: column;
-            padding: 20px;
-            border-radius: 16px;
-            background: #fff;
-            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
-            overflow: hidden;
-            /* 限制內部溢出 */
-        }
+    .container {
+      max-width: 800px;
+      height: 100vh;
+      margin: 0 auto;
+      display: flex;
+      flex-direction: column;
+      padding: 20px;
+      border-radius: 16px;
+      background: #fff;
+      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
+      position: relative;
+    }
 
-        h1 {
-            text-align: center;
-        }
+    #chatMessages {
+      flex: 1;
+      background: #e6ecf0;
+      overflow-y: auto;
+      max-height: 480px;
+      border-radius: 12px;
+      padding: 10px;
+      margin-bottom: 15px;
+    }
 
-        input,
-        label {
-            font-size: 16px;
-            display: block;
-            margin-top: 10px;
-            width: 100%;
-        }
+    .message-wrapper {
+      max-width: 70%;
+      margin: 10px;
+      padding: 12px 16px;
+      border-radius: 16px;
+      word-break: break-word;
+      clear: both;
+    }
 
-        #chatMessages {
-            background: #e6ecf0;
-            /* padding: 5px; */
-            height: 300px;
-            overflow-y: scroll;
-            border-radius: 12px;
-        }
+    .message-left {
+      background: #fff;
+      float: left;
+    }
 
-        .message-wrapper {
-            max-width: 70%;
-            margin: 10px;
-            padding: 12px 16px;
-            border-radius: 16px;
-            word-break: break-word;
-            clear: both;
-            position: relative;
-        }
+    .message-right {
+      background: #dcf8c6;
+      float: right;
+    }
 
-        .message-left {
-            background: #fff;
-            float: left;
-        }
+    .message-time {
+      font-size: 12px;
+      color: #555;
+      text-align: right;
+      margin-top: 5px;
+    }
 
-        .message-right {
-            background: #dcf8c6;
-            float: right;
-        }
+    .logout-btn {
+      position: absolute;
+      top: 16px;
+      right: 16px;
+      background: #fbe0e0;
+      color: #cc2222;
+      padding: 8px 15px;
+      border-radius: 8px;
+      text-decoration: none;
+      font-size: 15px;
+      transition: background 0.2s;
+    }
 
-        .message-time {
-            font-size: 12px;
-            color: #555;
-            text-align: right;
-            margin-top: 5px;
-        }
+    #message {
+      flex: 1;
+      font-size: 16px;
+      padding: 8px;
+      border: 1px solid #ccc;
+      border-radius: 8px;
+    }
 
-        .qr {
-            text-align: center;
-            margin-top: 20px;
-        }
+    input[type="submit"] {
+      font-size: 16px;
+      padding: 8px 16px;
+      border: none;
+      border-radius: 8px;
+      background-color: #4caf50;
+      color: white;
+      cursor: pointer;
+    }
 
-        .qr img {
-            max-width: 200px;
-        }
-
-        .logout-btn {
-            position: absolute;
-            top: 16px;
-            right: 16px;
-
-            background: #fbe0e0;
-            color: #cc2222;
-            padding: 8px 15px;
-            border-radius: 8px;
-            text-decoration: none;
-            font-size: 15px;
-            transition: background 0.19s;
-            z-index: 1000;
-
-        }
-
-        .logout-btn:hover {
-            background: #ffc0c0;
-        }
-    </style>
+  </style>
 </head>
 
 <body>
-    <div class="container">
-        <a href="/logout" class="logout-btn">登出</a>
-        <h1>Chat Room</h1>
-        <div class="qr">
-            <p>🌐 本機網址：<a href={{local_url}} target="_blank">{{local_url}}</a></p>
-            <img src="{{ qr_img_url }}" alt="QR Code">
-        </div>
-
-        <div id="chatMessages"></div>
-        <form id="chatForm">
-            <label>Message:</label>
-            <input type="text" id="message" required>
-            <input type="submit" value="Send">
-        </form>
+  <div class="container">
+    <a href="/logout" class="logout-btn">登出</a>
+    <h1 style="text-align: center; margin: 0 0 20px;">Chat Room</h1>
+    <div class="qr" style="text-align: center;margin-bottom: 15px;">
+      <p>🌐 本機網址：<a href="{{local_url}}" target="_blank">{{local_url}}</a></p>
+      <img src="{{ qr_img_url }}" style="max-width: 100px;" alt="QR Code" />
     </div>
 
-    <!-- 加入 Socket.IO 客戶端 need to add integrity-->
-    <script src="https://cdn.socket.io/4.7.2/socket.io.min.js" crossorigin="anonymous"></script>
+    <div id="chatMessages"></div>
 
-    <script>
-        const socket = io();
-        socket.on("messages", msg => {
-            addMessage(msg);
-        });
-        
-        // 提交訊息
-        document.getElementById("chatForm").addEventListener("submit", e => {
-            e.preventDefault();
-            const messageInput = document.getElementById("message");
-            const message = messageInput.value.trim();
-            if (message) {
-                socket.emit("send_message", { message });
-                messageInput.value = "";
-            }
-        });
+    <form id="chatForm" style="display: flex; gap: 10px;">
+      <input type="text" id="message" placeholder="輸入訊息..." required />
+      <input type="submit" value="Send" />
+    </form>
+  </div>
 
-        const currentUserId = {{ current_user_id | tojson }};
+  <script src="https://cdn.socket.io/4.7.2/socket.io.min.js" crossorigin="anonymous"></script>
+  <script>
+    const socket = io();
+    const currentUserId = {{ current_user_id | tojson }};
+    const chatBox = document.getElementById("chatMessages");
 
-        function addMessage(msg) {
-            const box = document.getElementById("chatMessages");
-            const { timestamp, user_id, name, message } = msg;
-            const isMe = user_id === currentUserId;
+    socket.on("messages", loadMessage);
 
-            const wrap = document.createElement("div");
-            wrap.className = "message-wrapper " + (isMe ? "message-right" : "message-left");
-            wrap.innerHTML = `
-            <strong>${name}:</strong> ${message}
-            <div class='message-time'>${timestamp.split(" ")[1]}</div>
-        `;
-            box.appendChild(wrap);
-            box.scrollTop = box.scrollHeight;
-        }
+    document.getElementById("chatForm").addEventListener("submit", e => {
+      e.preventDefault();
+      const messageInput = document.getElementById("message");
+      const message = messageInput.value.trim();
+      if (message) {
+        socket.emit("send_message", { message });
+        messageInput.value = "";
+      }
+    });
 
-        fetch("/get_recent_msg")
-            .then(res => res.json())
-            .then(data => {
-                data.messages.forEach(addMessage);
-            });
-    </script>
+    function loadMessage({ timestamp, user_id, name, message }) {
+      const isMe = user_id === currentUserId;
+      const wrap = document.createElement("div");
+      wrap.className = "message-wrapper " + (isMe ? "message-right" : "message-left");
+      wrap.innerHTML = `
+        <strong>${name}:</strong> ${message}
+        <div class='message-time'>${timestamp.split(" ")[1]}</div>
+      `;
+      chatBox.appendChild(wrap);
+      chatBox.scrollTop = chatBox.scrollHeight;
+    }
+
+    fetch("/get_recent_msg")
+      .then(res => res.json())
+      .then(data => data.messages.forEach(loadMessage));
+  </script>
 </body>
 
 </html>

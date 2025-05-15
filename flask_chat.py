@@ -12,11 +12,8 @@ from datetime import datetime
 
 
 app = Flask(__name__)
-app.secret_key = "1234"  # 隨便設，但一定要有
+app.secret_key = "1234" 
 socketio = SocketIO(app)
-
-
-# === 取得本地內網 IP ===
 
 
 def get_local_ip():
@@ -171,7 +168,6 @@ def get_recent_messages():
         db.close()
 
 
-# === 主程式 ===
 if __name__ == "__main__":
     local_ip = get_local_ip()
     local_url = f"http://{local_ip}:5000"

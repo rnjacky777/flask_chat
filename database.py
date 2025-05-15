@@ -35,7 +35,6 @@ Base.metadata.create_all(engine)
 
 
 def get_db() -> Generator[Session, None, None]:
-    """FastAPI 和 Flask 通用的 DB Session 產生器"""
     db = SessionLocal()
     try:
         yield db

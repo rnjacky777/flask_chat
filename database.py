@@ -1,8 +1,8 @@
 from typing import Generator
-from sqlalchemy import Column, Integer, String, ForeignKey, create_engine
-from sqlalchemy.orm import relationship
+from sqlalchemy import Column, DateTime, Integer, String, ForeignKey, create_engine
+from sqlalchemy.orm import relationship, Session, scoped_session, sessionmaker
 from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy.orm import Session,scoped_session,sessionmaker
+
 Base = declarative_base()
 
 
@@ -22,17 +22,17 @@ class Message(Base):
     id = Column(Integer, primary_key=True, autoincrement=True)
     user_id = Column(Integer, ForeignKey('users.id'), nullable=False)
     message = Column(String, nullable=False)
-    timestamp = Column(String, nullable=False)
+    timestamp = Column(DateTime, nullable=False)
 
-    # 對應到 User 的關聯
     user = relationship("User", back_populates="messages")
 
 
 # 建立 SQLite engine
 engine = create_engine("sqlite:///example.db")
-SessionLocal = scoped_session(sessionmaker(bind=engine)) 
-# 檢查是否有表格，若沒有就建立
+SessionLocal = scoped_session(sessionmaker(bind=engine))
+
 Base.metadata.create_all(engine)
+
 
 def get_db() -> Generator[Session, None, None]:
     """FastAPI 和 Flask 通用的 DB Session 產生器"""

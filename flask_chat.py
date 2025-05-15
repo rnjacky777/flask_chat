@@ -1,21 +1,15 @@
 from typing import List
-
 import socketio
-from database import SessionLocal, Message, User
+from flask_socketio import SocketIO, emit
+from database import SessionLocal, Message, User, get_db
 from sqlalchemy.exc import SQLAlchemyError
 from flask import request
 from pathlib import Path
 from flask import Flask, render_template, request, jsonify, session, redirect, url_for
-import sqlite3
 from werkzeug.security import check_password_hash, generate_password_hash
 import qrcode
-import os
 from datetime import datetime
-from database import get_db
-from flask_socketio import SocketIO, emit
 
-from schemas import MessageSchema
-qr_base_dir = Path(__file__).resolve().parent
 
 app = Flask(__name__)
 app.secret_key = "1234"  # 隨便設，但一定要有
@@ -41,14 +35,12 @@ def get_local_ip():
 
 
 def generate_qrcode(url):
-    # 找到目前檔案位置，定位 static/qr_codes 資料夾
     static_dir = Path(__file__).parent / "static"
     static_dir.mkdir(parents=True, exist_ok=True)
-
     img_path = static_dir / "qrcode.png"
 
     if img_path.exists():
-        img_path.unlink()  # 刪除舊的 QR 圖片
+        img_path.unlink()
 
     qrcode.make(url).save(img_path)
     print(f"✅ QR Code saved at: {img_path}, ip is {url}")
@@ -81,6 +73,7 @@ def login():
             return jsonify({"success": False, "error": "不是本人不要盜帳號"})
 
     return render_template("login.html")
+
 
 @app.route("/register", methods=["GET", "POST"])
 def register():
@@ -115,7 +108,7 @@ def register():
 
 @app.route("/logout")
 def logout():
-    session.clear() 
+    session.clear()
     return redirect("/login")
 
 
@@ -125,13 +118,14 @@ def main_page():
     if "username" not in session:
         return redirect("/login")
     user_id = session.get("user_id")
-    return render_template('chat.html', local_url=local_url, qr_img_url=qr_img_url,current_user_id=user_id)
+    return render_template('chat.html', local_url=local_url, qr_img_url=qr_img_url, current_user_id=user_id)
+
 
 @socketio.on("send_message")
 def handle_send_message(data):
     content = data.get("message", "").strip()
     user_id = session.get("user_id")
-    username = session.get("username") 
+    username = session.get("username")
 
     if not user_id or not content:
         return
@@ -139,13 +133,13 @@ def handle_send_message(data):
     db = SessionLocal()
     try:
         time_ = datetime.now()
-        msg = Message(user_id=user_id, message=content, timestamp=datetime.now())
+        msg = Message(user_id=user_id, message=content,
+                      timestamp=datetime.now())
         db.add(msg)
         db.commit()
-
         emit("messages", {
             "user_id": user_id,
-            "name":username,
+            "name": username,
             "message": content,
             "timestamp": time_.strftime("%Y-%m-%d %H:%M:%S")
         }, broadcast=True)
@@ -156,18 +150,20 @@ def handle_send_message(data):
     finally:
         db.close()
 
+
 @app.route("/get_recent_msg", methods=["GET"])
 def get_recent_messages():
     db = next(get_db())
     try:
         rows: List[Message] = db.query(
             Message).order_by(Message.id.asc()).all()
-        pydantic_messages: List[MessageSchema] = [MessageSchema(timestamp=msg.timestamp,
-                                                                name=msg.user.username,
-                                                                message=msg.message,
-                                                                user_id=msg.user_id) for msg in rows]
         return jsonify({
-            "messages": [msg.model_dump() for msg in pydantic_messages]
+            "messages": [{
+                "user_id": msg.user_id,
+                "name": msg.user.username,
+                "message": msg.message,
+                "timestamp": msg.timestamp.strftime("%Y-%m-%d %H:%M:%S")
+            }for msg in rows]
         })
     except Exception as e:
         return "Error", 500

@@ -129,50 +129,48 @@
         </form>
     </div>
 
+    <!-- 加入 Socket.IO 客戶端 need to add integrity-->
+    <script src="https://cdn.socket.io/4.7.2/socket.io.min.js" crossorigin="anonymous"></script>
+
     <script>
-
-
+        const socket = io();
+        socket.on("messages", msg => {
+            addMessage(msg);
+        });
+        
+        // 提交訊息
         document.getElementById("chatForm").addEventListener("submit", e => {
             e.preventDefault();
-            const message = document.getElementById("message").value;
-
-            const formData = new FormData();
-            formData.append("message", message);
-
-            fetch("/send_msg", { method: "POST", body: formData })
-                .then(res => res.text())
-                .then(txt => {
-                    document.getElementById("message").value = "";
-                    loadMessages();
-                });
+            const messageInput = document.getElementById("message");
+            const message = messageInput.value.trim();
+            if (message) {
+                socket.emit("send_message", { message });
+                messageInput.value = "";
+            }
         });
 
-        function loadMessages() {
-            fetch("/get_recent_msg")
-                .then(res => res.json())
-                .then(data => {
-                    const { current_user_id, messages } = data;
-                    const box = document.getElementById("chatMessages");
-                    box.innerHTML = "";
+        const currentUserId = {{ current_user_id | tojson }};
 
-                    messages.forEach(msg => {
-                        const { timestamp, user_id, name, message } = msg;
-                        const isMe = user_id === current_user_id;
+        function addMessage(msg) {
+            const box = document.getElementById("chatMessages");
+            const { timestamp, user_id, name, message } = msg;
+            const isMe = user_id === currentUserId;
 
-                        const wrap = document.createElement("div");
-                        wrap.className = "message-wrapper " + (isMe ? "message-right" : "message-left");
-                        wrap.innerHTML = `
-                    <strong>${name}:</strong> ${message}
-                    <div class='message-time'>${timestamp.split(" ")[1]}</div>`;
-                        box.appendChild(wrap);
-                    });
-
-                    box.scrollTop = box.scrollHeight;
-                });
+            const wrap = document.createElement("div");
+            wrap.className = "message-wrapper " + (isMe ? "message-right" : "message-left");
+            wrap.innerHTML = `
+            <strong>${name}:</strong> ${message}
+            <div class='message-time'>${timestamp.split(" ")[1]}</div>
+        `;
+            box.appendChild(wrap);
+            box.scrollTop = box.scrollHeight;
         }
 
-        loadMessages();
-        setInterval(loadMessages, 5000);
+        fetch("/get_recent_msg")
+            .then(res => res.json())
+            .then(data => {
+                data.messages.forEach(addMessage);
+            });
     </script>
 </body>
 

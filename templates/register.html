@@ -19,14 +19,16 @@
             letter-spacing: 2px; box-shadow: 0 3px 9px rgba(52,130,219,0.12); margin-top: 6px; transition: background 0.22s;}
         input[type=submit]:hover { background: linear-gradient(90deg,#23a6d5,#4364f7 85%);}
         .tips { margin-top: 18px; font-size: 0.97rem; color: #58607c; text-align: center;}
-        .error { color: #f23434; margin-bottom: 10px; font-size: 1rem; text-align: center;}
-        .success { color: #008c58; margin-bottom: 10px; font-size: 1rem; text-align: center;}
+        .error, .success { margin-bottom: 10px; font-size: 1rem; text-align: center;}
+        .error { color: #f23434; }
+        .success { color: #008c58; }
     </style>
 </head>
 <body>
-    <form class="register-box" method="post" autocomplete="off">
+    <form class="register-box" id="registerForm" autocomplete="off">
         <h2>註冊帳號</h2>
-        {% if error %}<div class="error">{{ error }}</div>{% endif %}
+        <div id="errorBox" class="error" style="display:none;"></div>
+        <div id="successBox" class="success" style="display:none;"></div>
         <label for="username">使用者名稱</label>
         <input name="username" id="username" type="text" required autofocus autocomplete="username">
         <label for="password">密碼</label>
@@ -36,6 +38,45 @@
             已有帳號？<a href="/login" style="color:#298eea;text-decoration:none;">登入</a>
         </div>
     </form>
-    <script>document.getElementById("username").focus();</script>
+
+    <script>
+        document.getElementById("username").focus();
+
+        document.getElementById("registerForm").addEventListener("submit", async function(e) {
+            e.preventDefault(); // 防止表單預設提交
+
+            // 清除提示文字
+            const errorBox = document.getElementById("errorBox");
+            const successBox = document.getElementById("successBox");
+            errorBox.style.display = "none";
+            successBox.style.display = "none";
+
+            const form = e.target;
+            const formData = new FormData(form);
+
+            try {
+                const response = await fetch("/register", {
+                    method: "POST",
+                    body: formData
+                });
+
+                const result = await response.json();
+
+                if (result.success) {
+                    successBox.textContent = result.message;
+                    successBox.style.display = "block";
+                    setTimeout(() => {
+                        window.location.href = "/login";
+                    }, 1000);
+                } else {
+                    errorBox.textContent = result.error || "註冊失敗，請稍後再試。";
+                    errorBox.style.display = "block";
+                }
+            } catch (err) {
+                errorBox.textContent = "發生錯誤，請稍後再試。";
+                errorBox.style.display = "block";
+            }
+        });
+    </script>
 </body>
 </html>

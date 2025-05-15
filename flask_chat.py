@@ -1,52 +1,26 @@
 from typing import List
+
+import socketio
 from database import SessionLocal, Message, User
 from sqlalchemy.exc import SQLAlchemyError
-from flask import request,Response
+from flask import request
 from pathlib import Path
-from flask import Flask, render_template, request, jsonify, send_file, session, redirect, url_for
+from flask import Flask, render_template, request, jsonify, session, redirect, url_for
 import sqlite3
 from werkzeug.security import check_password_hash, generate_password_hash
 import qrcode
 import os
 from datetime import datetime
-from database import Base, get_db
-from flask_socketio import SocketIO, send
+from database import get_db
+from flask_socketio import SocketIO, emit
 
 from schemas import MessageSchema
 qr_base_dir = Path(__file__).resolve().parent
 
 app = Flask(__name__)
 app.secret_key = "1234"  # 隨便設，但一定要有
+socketio = SocketIO(app)
 
-# === 資料庫設定（存在手機 Download/ChatMessages/ 資料夾） ===
-DB_DIR = "./"
-DB_PATH = os.path.join(DB_DIR, "chat.db")
-os.makedirs(DB_DIR, exist_ok=True)
-
-
-def init_db():
-    conn = sqlite3.connect(DB_PATH)
-    c = conn.cursor()
-    c.execute('''
-        CREATE TABLE IF NOT EXISTS users (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            username TEXT NOT NULL UNIQUE,
-            password_hash TEXT NOT NULL
-        )
-    ''')
-    c.execute('''
-        CREATE TABLE IF NOT EXISTS messages (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            name TEXT NOT NULL,
-            message TEXT NOT NULL,
-            timestamp TEXT NOT NULL
-        )
-    ''')
-    conn.commit()
-    conn.close()
-
-
-init_db()
 
 # === 取得本地內網 IP ===
 
@@ -65,8 +39,6 @@ def get_local_ip():
             continue
     return "127.0.0.1"
 
-# === 產生 QRCode 儲存 Download/QRcode ===
-
 
 def generate_qrcode(url):
     # 找到目前檔案位置，定位 static/qr_codes 資料夾
@@ -82,77 +54,63 @@ def generate_qrcode(url):
     print(f"✅ QR Code saved at: {img_path}, ip is {url}")
     return str(img_path)
 
-# === 登入 ===
-
 
 @app.route("/login", methods=["GET", "POST"])
 def login():
-    error = None
-
     if request.method == "POST":
         username = request.form.get("username", "").strip()
         password = request.form.get("password", "").strip()
 
         if not username or not password:
-            return render_template("login.html", error="給我輸入帳密ZZZ")
+            return jsonify({"success": False, "error": "給我輸入帳密ZZZ"})
+
         try:
             db = SessionLocal()
             user = db.query(User).filter_by(username=username).first()
         except SQLAlchemyError as e:
             print(f"[DB ERROR] {e}")
-            return render_template("login.html", error="Server side error")
+            return jsonify({"success": False, "error": "Server side error"})
         finally:
             db.close()
 
         if user and check_password_hash(user.password_hash, password):
             session["user_id"] = user.id
             session["username"] = user.username
-            return redirect("/")
+            return jsonify({"success": True})
         else:
-            return render_template("login.html", error="不是本人不要盜帳號")
+            return jsonify({"success": False, "error": "不是本人不要盜帳號"})
 
-    return render_template("login.html", error=error)
-
-# === 註冊 ===
-
+    return render_template("login.html")
 
 @app.route("/register", methods=["GET", "POST"])
 def register():
-    error = None
-    success = None
-
     if request.method == "POST":
         username = request.form["username"].strip()
         password = request.form["password"].strip()
 
         if not username or not password:
-            error = "帳號和密碼不可為空。"
+            return jsonify({"success": False, "error": "帳號和密碼不可為空。"})
         else:
-            password_hash = generate_password_hash(password)
             db = SessionLocal()
             try:
-                # 檢查是否已有該帳號
                 existing_user = db.query(User).filter_by(
                     username=username).first()
                 if existing_user:
-                    error = "帳號已存在，請選擇其他帳號。"
+                    return jsonify({"success": False, "error": "帳號已存在，請選擇其他帳號。"})
                 else:
-                    # 新增使用者
+                    password_hash = generate_password_hash(password)
                     new_user = User(username=username,
                                     password_hash=password_hash)
                     db.add(new_user)
                     db.commit()
-                    success = "註冊成功，請登入。"
-                    return redirect("/login")  # 或直接登入
+                    return jsonify({"success": True, "message": "註冊成功，請登入。"})
             except Exception:
                 db.rollback()
-                error = "註冊失敗，請稍後再試。"
+                return jsonify({"success": False, "error": "註冊失敗，請稍後再試。"})
             finally:
                 db.close()
 
-    return render_template("register.html", error=error, success=success)
-
-# === 登出 ===
+    return render_template("register.html")
 
 
 @app.route("/logout")
@@ -166,29 +124,38 @@ def main_page():
     qr_img_url = url_for("static", filename='qrcode.png')
     if "username" not in session:
         return redirect("/login")
-    return render_template('chat.html', local_url=local_url, qr_img_url=qr_img_url)
+    user_id = session.get("user_id")
+    return render_template('chat.html', local_url=local_url, qr_img_url=qr_img_url,current_user_id=user_id)
 
-@app.route("/send_msg", methods=["POST"])
-def send_msg():
-    message = request.form.get("message", "").strip()
-    timestamp = datetime.now()
+@socketio.on("send_message")
+def handle_send_message(data):
+    content = data.get("message", "").strip()
+    user_id = session.get("user_id")
+    username = session.get("username") 
 
-    db = next(get_db())
+    if not user_id or not content:
+        return
+
+    db = SessionLocal()
     try:
-        new_message = Message(message=message,
-                              user_id=session["user_id"],
-                              timestamp=timestamp)
-        db.add(new_message)
+        time_ = datetime.now()
+        msg = Message(user_id=user_id, message=content, timestamp=datetime.now())
+        db.add(msg)
         db.commit()
-        return Response(status=200)
-    except SQLAlchemyError as e:
+
+        emit("messages", {
+            "user_id": user_id,
+            "name":username,
+            "message": content,
+            "timestamp": time_.strftime("%Y-%m-%d %H:%M:%S")
+        }, broadcast=True)
+
+    except Exception:
         db.rollback()
-        return Response("Error saving message", status=500)
+        emit("error", {"message": "訊息儲存失敗"})
     finally:
         db.close()
 
-
-# === 讀取訊息 ===
 @app.route("/get_recent_msg", methods=["GET"])
 def get_recent_messages():
     db = next(get_db())
@@ -199,9 +166,7 @@ def get_recent_messages():
                                                                 name=msg.user.username,
                                                                 message=msg.message,
                                                                 user_id=msg.user_id) for msg in rows]
-        current_user_id = session.get("user_id")
         return jsonify({
-            "current_user_id": current_user_id,
             "messages": [msg.model_dump() for msg in pydantic_messages]
         })
     except Exception as e:
@@ -213,8 +178,8 @@ def get_recent_messages():
 # === 主程式 ===
 if __name__ == "__main__":
     local_ip = get_local_ip()
-    local_url = f"http://{local_ip}:8080"
+    local_url = f"http://{local_ip}:5000"
     app.config["local_url"] = local_url
     generate_qrcode(local_url)
     print(f"✅ Local Chatroom running at: {local_url}")
-    app.run(host="0.0.0.0", port=8080, debug=True)
+    socketio.run(app, host="0.0.0.0", port=5000, debug=True)

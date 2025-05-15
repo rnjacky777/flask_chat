@@ -102,7 +102,7 @@
 <body>
     <form class="login-box" method="post" autocomplete="off">
         <h2>聊天室登入</h2>
-        {% if error %}<div class="error">{{ error }}</div>{% endif %}
+        <div class="error" style="display:none;"></div>
         <label for="username">使用者名稱</label>
         <input name="username" id="username" type="text" required autofocus autocomplete="username">
         <label for="password">密碼</label>
@@ -112,7 +112,38 @@
             還沒有帳號？<a href="/register" style="color:#298eea;text-decoration:none;">註冊</a>
         </div>
     </form>
-    <script>document.getElementById("username").focus();</script>
+
+    <script>
+        document.getElementById("username").focus();
+
+        document.querySelector(".login-box").addEventListener("submit", async function (e) {
+            e.preventDefault();
+
+            const form = e.target;
+            const formData = new FormData(form);
+            const errorBox = form.querySelector(".error");
+
+            try {
+                const response = await fetch("/login", {
+                    method: "POST",
+                    body: formData,
+                });
+
+                const result = await response.json();
+
+                if (result.success) {
+                    window.location.href = "/";
+                } else {
+                    errorBox.textContent = result.error || "登入失敗";
+                    errorBox.style.display = "block";
+                }
+            } catch (err) {
+                console.error("Login failed:", err);
+                errorBox.textContent = "連線失敗，請稍後再試";
+                errorBox.style.display = "block";
+            }
+        });
+    </script>
 </body>
 
 </html>
